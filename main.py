@@ -45,38 +45,26 @@ def compute_power_ranking(row):
 
     if row["Pos"] == "GK":
 
-        core_avg = (
-            row["Goalkeeping"] +
-            row["Defend"] +
-            row["Pass"] +
-            row["Explosiveness"] +
-            row["Speed"]
-        ) / 5
-
-        bonus = (
-            (row["Goalkeeping"] - core_avg) * 0.35 +
-            (row["Defend"] - core_avg) * 0.10 +
-            (row["Explosiveness"] - core_avg) * 0.15
+        power_ranking = (
+            row["Goalkeeping"] * 0.55 +
+            row["Explosiveness"] * 0.15 +
+            row["Defend"] * 0.10 +
+            row["Pass"] * 0.08 +
+            row["Speed"] * 0.07 +
+            row["PWR"] * 0.05
         )
 
     else:
 
-        core_avg = (
-            row["Speed"] +
-            row["Shoot"] +
-            row["Dribble"] +
-            row["Pass"] +
-            row["Defend"] +
-            row["Explosiveness"]
-        ) / 6
-
-        bonus = (
-            (row["Shoot"] - core_avg) * 0.25 +
-            (row["Explosiveness"] - core_avg) * 0.30 +
-            (row["Speed"] - core_avg) * 0.15
+        power_ranking = (
+            row["Explosiveness"] * 0.30 +
+            row["Shoot"] * 0.22 +
+            row["Speed"] * 0.18 +
+            row["Dribble"] * 0.15 +
+            row["Pass"] * 0.08 +
+            row["Defend"] * 0.04 +
+            row["PWR"] * 0.03
         )
-
-    power_ranking = core_avg + bonus
 
     return round(power_ranking, 2)
 
@@ -169,6 +157,7 @@ except Exception:
 
 
 st.caption("Live data from GitHub main branch")
+
 
 
 
