@@ -1,4 +1,9 @@
-Name,Pos,Nationality,Season,Rarity,PWR,Speed,Shoot,Dribble,Pass,Defend,Explosiveness,Goalkeeping
-Luis Diaz,FW,Colombia,adidas: The Choice,Mythical,100,100,99,99,91,70,101,0
-Mohamed Salah,FW,Egypt,adidas Radiant Blaze,Mythical,100,98,99,97,97,75,98,0
-Gianluigi Donnarumma,GK,Italy,adidas: The Choice,Mythical,101,91,0,0,86,100,101,105
+Name,Pos,Nationality,Rarity,Season,PWR,Speed,Shoot,Dribble,Pass,Defend,Explosiveness,Goalkeeping
+Luis Diaz,FW,Colombia,Mythical,The Choice,100,100,99,99,91,70,101,0
+Mohamed Salah,FW,Egypt,Mythical,Radiant Blaze,100,98,99,97,97,75,98,0
+Erling Haaland,FW,Norway,Mythical,Called Up,100,99,102,96,91,83,90,0
+Cristiano Ronaldo,FW,Portugal,Mythical,Pillars,100,95,102,99,98,76,90,0
+Lionel Messi,FW,Argentina,Mythical,FCWC,100,91,100,100,102,76,92,0
+Bukayo Saka,FW,England,Mythical,Playmakers,99,95,97,98,94,78,97,0
+Harry Kane,FW,England,Mythical,FCWC,99,85,104,96,100,71,95,0
+Viktor Gyokeres,FW,Sweden,Mythical,Fresh Ink,97,99,96,93,87,79,95,0
