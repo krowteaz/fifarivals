@@ -47,29 +47,28 @@ def compute_power_ranking(row):
     if row["Pos"] == "GK":
 
         power_ranking = (
-            row["Goalkeeping"] * 0.45 +
-            row["Defend"] * 0.15 +
-            row["Pass"] * 0.10 +
-            row["Explosiveness"] * 0.10 +
+            row["Goalkeeping"] * 0.60 +
+            row["Defend"] * 0.10 +
+            row["Pass"] * 0.08 +
+            row["Explosiveness"] * 0.07 +
             row["Speed"] * 0.05 +
-            row["PWR"] * 0.15
-        )
-
-    # FW, MF, DF formula
-    else:
-
-        power_ranking = (
-            row["Speed"] * 0.15 +
-            row["Shoot"] * 0.19 +
-            row["Dribble"] * 0.17 +
-            row["Pass"] * 0.10 +
-            row["Defend"] * 0.04 +
-            row["Explosiveness"] * 0.25 +
             row["PWR"] * 0.10
         )
 
-    return round(power_ranking, 2)
+    # FW MF DF formula (EXACT MATCH TO EXCEL)
+    else:
 
+        power_ranking = (
+            row["Speed"] * 0.18 +
+            row["Shoot"] * 0.22 +
+            row["Dribble"] * 0.18 +
+            row["Pass"] * 0.12 +
+            row["Defend"] * 0.05 +
+            row["Explosiveness"] * 0.23 +
+            row["PWR"] * 0.02
+        )
+
+    return round(power_ranking, 2)
 
 # Load data
 df = load_data()
@@ -159,3 +158,4 @@ except Exception:
 
 
 st.caption("Live data from GitHub main branch")
+
