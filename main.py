@@ -7,6 +7,7 @@ import pandas as pd
 st.set_page_config(page_title="Player Power Ranking", layout="wide")
 
 st.title("⚽ Player Power Ranking (Live from GitHub)")
+st.subheader("🔧 Manual Weight Tuning Mode")
 
 
 # --------------------------------------------------
@@ -16,14 +17,13 @@ GITHUB_CSV = "https://raw.githubusercontent.com/krowteaz/fifarivals/main/players
 
 
 # --------------------------------------------------
-# Load data - EXACTLY as it exists in the CSV
+# Load data
 # --------------------------------------------------
 @st.cache_data(ttl=60)
 def load_data():
 
     df = pd.read_csv(GITHUB_CSV)
 
-    # Only convert numeric columns, don't modify any values
     numeric_cols = [
         "PWR",
         "Speed",
@@ -36,29 +36,85 @@ def load_data():
     ]
 
     for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+        if col not in df.columns:
+            df[col] = 0
+
+        df[col] = pd.to_numeric(
+            df[col],
+            errors="coerce"
+        ).fillna(0)
 
     return df
 
 
 # --------------------------------------------------
-# Load data - NO CALCULATIONS, just use what's in the CSV
+# Sidebar - Manual Weight Controls
+# --------------------------------------------------
+st.sidebar.header("🎛️ Manual Weight Tuning")
+
+# Create sliders for each weight
+st.sidebar.subheader("Stat Weights (must sum to 1.00)")
+
+w_pwr = st.sidebar.slider("PWR Weight", 0.0, 1.0, 0.25, 0.01)
+w_speed = st.sidebar.slider("Speed Weight", 0.0, 1.0, 0.10, 0.01)
+w_shoot = st.sidebar.slider("Shoot Weight", 0.0, 1.0, 0.15, 0.01)
+w_dribble = st.sidebar.slider("Dribble Weight", 0.0, 1.0, 0.10, 0.01)
+w_pass = st.sidebar.slider("Pass Weight", 0.0, 1.0, 0.08, 0.01)
+w_defend = st.sidebar.slider("Defend Weight", 0.0, 1.0, 0.05, 0.01)
+w_explosiveness = st.sidebar.slider("Explosiveness Weight", 0.0, 1.0, 0.27, 0.01)
+
+# Calculate total
+total_weight = w_pwr + w_speed + w_shoot + w_dribble + w_pass + w_defend + w_explosiveness
+st.sidebar.metric("Total Weight", f"{total_weight:.2f}")
+
+if abs(total_weight - 1.0) > 0.01:
+    st.sidebar.warning(f"Weights should sum to 1.00 (currently {total_weight:.2f})")
+
+# Baseline adjustment
+st.sidebar.subheader("Baseline Adjustment")
+baseline = st.sidebar.slider("Baseline Subtract", 0, 20, 0, 1)
+multiplier = st.sidebar.slider("Multiplier", 0.8, 1.2, 1.0, 0.01)
+
+
+# --------------------------------------------------
+# Power Ranking formula with manual weights
+# --------------------------------------------------
+def compute_power_ranking(row):
+    if row["Pos"] == "GK":
+        # Simple GK formula for now
+        return round(row["PWR"] * 0.4 + row["Goalkeeping"] * 0.6, 2)
+    else:
+        # Apply manual weights
+        power = (
+            row["PWR"] * w_pwr +
+            row["Speed"] * w_speed +
+            row["Shoot"] * w_shoot +
+            row["Dribble"] * w_dribble +
+            row["Pass"] * w_pass +
+            row["Defend"] * w_defend +
+            row["Explosiveness"] * w_explosiveness
+        )
+        
+        # Apply baseline adjustment and multiplier
+        power = (power - baseline) * multiplier
+        
+        return round(power, 2)
+
+
+# --------------------------------------------------
+# Load and compute
 # --------------------------------------------------
 df = load_data()
 
-# Check if there's already a Power Ranking column in the CSV
-if "Power Ranking" not in df.columns:
-    # If not, check if there's a PWR column to use as fallback
-    if "PWR" in df.columns:
-        df["Power Ranking"] = df["PWR"]
-    else:
-        df["Power Ranking"] = 0
-        st.warning("No Power Ranking or PWR column found in CSV")
+df["Power Ranking"] = df.apply(
+    compute_power_ranking,
+    axis=1
+)
 
 
 # --------------------------------------------------
-# Ranking based on existing Power Ranking values
+# Ranking
 # --------------------------------------------------
 df["Rank"] = df["Power Ranking"].rank(
     ascending=False,
@@ -73,21 +129,15 @@ df = df.sort_values("Rank")
 # --------------------------------------------------
 st.sidebar.header("Filters")
 
-if "Pos" in df.columns:
-    pos_filter = st.sidebar.multiselect(
-        "Position",
-        sorted(df["Pos"].unique())
-    )
-else:
-    pos_filter = []
+pos_filter = st.sidebar.multiselect(
+    "Position",
+    sorted(df["Pos"].unique())
+)
 
-if "Rarity" in df.columns:
-    rarity_filter = st.sidebar.multiselect(
-        "Rarity",
-        sorted(df["Rarity"].unique())
-    )
-else:
-    rarity_filter = []
+rarity_filter = st.sidebar.multiselect(
+    "Rarity",
+    sorted(df["Rarity"].unique())
+)
 
 # Display options
 st.sidebar.header("Display Options")
@@ -106,7 +156,6 @@ if total_players > 0:
     )
 else:
     max_rows = 10
-    st.sidebar.warning("No player data available")
 
 # Apply filters
 filtered_df = df.copy()
@@ -122,51 +171,90 @@ filtered_df = filtered_df.head(display_count)
 
 
 # --------------------------------------------------
-# Display - SHOW EXACT CSV VALUES
+# Target Values Display
 # --------------------------------------------------
-# Determine which columns to display (only those that exist in the CSV)
-available_cols = ["Rank", "Power Ranking"] if "Power Ranking" in filtered_df.columns else ["Rank"]
-available_cols.extend([col for col in ["Name", "Pos", "Nationality", "Rarity", "Season", "PWR", 
-                                        "Speed", "Shoot", "Dribble", "Pass", "Defend", "Explosiveness", "Goalkeeping"]
-                      if col in filtered_df.columns])
+st.sidebar.header("🎯 Target Values")
+target_values = {
+    "Luis Diaz": 101.41,
+    "Mohamed Salah": 100.94,
+    "Erling Haaland": 100.05,
+    "Cristiano Ronaldo": 100.05,
+    "Lionel Messi": 99.58,
+    "Bukayo Saka": 99.48,
+    "Harry Kane": 99.11,
+    "Viktor Gyökeres": 98.13
+}
 
-display_cols = available_cols
+for player, target in target_values.items():
+    player_data = df[df["Name"] == player]
+    if not player_data.empty:
+        current = player_data["Power Ranking"].values[0]
+        diff = current - target
+        color = "green" if abs(diff) < 0.1 else "red"
+        st.sidebar.markdown(f"**{player}**: {current:.2f} vs {target} (<span style='color:{color}'>{diff:+.2f}</span>)", unsafe_allow_html=True)
+
+
+# --------------------------------------------------
+# Display
+# --------------------------------------------------
+display_cols = [
+    "Rank",
+    "Power Ranking",
+    "Name",
+    "Pos",
+    "Nationality",
+    "Rarity",
+    "Season",
+    "PWR",
+    "Speed",
+    "Shoot",
+    "Dribble",
+    "Pass",
+    "Defend",
+    "Explosiveness"
+]
+
+# Add Goalkeeping column for GK rows
+if "Goalkeeping" in df.columns:
+    display_cols.append("Goalkeeping")
 
 # Display stats
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("Total Players", len(df))
 with col2:
     st.metric("Players Displayed", len(filtered_df))
 with col3:
-    if len(filtered_df) > 0 and "Power Ranking" in filtered_df.columns:
+    if len(filtered_df) > 0:
         st.metric("Max Power Ranking", f"{filtered_df['Power Ranking'].max():.2f}")
     else:
         st.metric("Max Power Ranking", "N/A")
+with col4:
+    st.metric("Current Weights Total", f"{total_weight:.2f}")
 
-# Show raw data from CSV
-st.subheader("📊 Raw Data from CSV (Exact Values)")
-
+# Main display
 if len(filtered_df) > 0:
-    # Create format dictionary for numeric columns
-    format_dict = {}
-    for col in filtered_df.columns:
-        if col in ["PWR", "Speed", "Shoot", "Dribble", "Pass", "Defend", "Explosiveness", "Goalkeeping", "Power Ranking"]:
-            if col in filtered_df.columns:
-                format_dict[col] = "{:.2f}" if col == "Power Ranking" else "{:.0f}"
+    # Highlight Luis Diaz and other target players
+    def highlight_targets(row):
+        if row['Name'] in target_values:
+            return ['background-color: #90EE90'] * len(row)
+        return [''] * len(row)
     
-    # Style the dataframe
-    if format_dict:
-        styled = filtered_df[display_cols].style.format(format_dict)
-        
-        # Add gradient only if Power Ranking exists
-        if "Power Ranking" in filtered_df.columns:
-            styled = styled.background_gradient(
-                subset=["Power Ranking"],
-                cmap="RdYlGn"
-            )
-    else:
-        styled = filtered_df[display_cols]
+    format_dict = {
+        "Power Ranking": "{:.2f}",
+        "PWR": "{:.0f}",
+        "Speed": "{:.0f}",
+        "Shoot": "{:.0f}",
+        "Dribble": "{:.0f}",
+        "Pass": "{:.0f}",
+        "Defend": "{:.0f}",
+        "Explosiveness": "{:.0f}"
+    }
+    
+    styled = filtered_df[display_cols].style.format(format_dict).apply(highlight_targets, axis=1).background_gradient(
+        subset=["Power Ranking"],
+        cmap="RdYlGn"
+    )
 
     st.dataframe(
         styled,
@@ -174,25 +262,41 @@ if len(filtered_df) > 0:
         height=600
     )
     
-    # Show first few rows to verify
-    st.subheader("🔍 First 5 Rows (Verify CSV Content)")
-    st.dataframe(filtered_df.head(5), use_container_width=True)
+    # Show current vs target for top players
+    st.subheader("🎯 Current vs Target Values")
+    comparison_data = []
+    for player, target in target_values.items():
+        player_row = df[df["Name"] == player]
+        if not player_row.empty:
+            comparison_data.append({
+                "Player": player,
+                "Current": player_row["Power Ranking"].values[0],
+                "Target": target,
+                "Difference": player_row["Power Ranking"].values[0] - target
+            })
+    
+    if comparison_data:
+        comparison_df = pd.DataFrame(comparison_data)
+        st.dataframe(
+            comparison_df.style.format({
+                "Current": "{:.2f}",
+                "Target": "{:.2f}",
+                "Difference": "{:+.2f}"
+            }).background_gradient(subset=["Difference"], cmap="RdYlGn_r"),
+            use_container_width=True
+        )
     
 else:
     st.warning("No players match the selected filters")
 
-# Show column names to help debug
-with st.expander("📋 CSV Column Names"):
-    st.write(list(df.columns))
+st.caption("Adjust the weights in the sidebar until the values match your Excel file exactly!")
 
-st.caption(f"Live data from GitHub main branch - Showing EXACT values from CSV")
-
-# Add download button for raw data
-if st.button("📥 Download Raw CSV Data"):
+# Add download button
+if st.button("📥 Download Current Rankings"):
     csv = df.to_csv(index=False)
     st.download_button(
         label="Click to Download",
         data=csv,
-        file_name="raw_player_data.csv",
+        file_name="player_power_rankings.csv",
         mime="text/csv"
     )
