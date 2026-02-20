@@ -48,55 +48,32 @@ def load_data():
 
 
 # --------------------------------------------------
-# EXACT Power Ranking formula matching your table
+# CORRECTED Power Ranking formula (matches your second image)
 # --------------------------------------------------
 def compute_power_ranking(row):
 
     if row["Pos"] == "GK":
-
-        weights = {
-            "Goalkeeping": 0.40,
-            "Explosiveness": 0.20,
-            "Defend": 0.15,
-            "Pass": 0.10,
-            "Speed": 0.10,
-            "PWR": 0.05
-        }
-
-        base = row["PWR"]
-
-        bonus = (
-            (row["Goalkeeping"] - base) * weights["Goalkeeping"] +
-            (row["Explosiveness"] - base) * weights["Explosiveness"] +
-            (row["Defend"] - base) * weights["Defend"] +
-            (row["Pass"] - base) * weights["Pass"] +
-            (row["Speed"] - base) * weights["Speed"]
+        # GK Formula (assuming similar structure to second image)
+        power_ranking = (
+            row["PWR"] * 0.40 +
+            row["Goalkeeping"] * 0.25 +
+            row["Explosiveness"] * 0.15 +
+            row["Defend"] * 0.10 +
+            row["Pass"] * 0.05 +
+            row["Speed"] * 0.05
         )
-
     else:
-
-        weights = {
-            "Explosiveness": 0.22,
-            "Shoot": 0.18,
-            "Speed": 0.14,
-            "Dribble": 0.12,
-            "Pass": 0.08,
-            "Defend": 0.05
-        }
-
-        base = row["PWR"]
-
-        bonus = (
-            (row["Explosiveness"] - base) * weights["Explosiveness"] +
-            (row["Shoot"] - base) * weights["Shoot"] +
-            (row["Speed"] - base) * weights["Speed"] +
-            (row["Dribble"] - base) * weights["Dribble"] +
-            (row["Pass"] - base) * weights["Pass"] +
-            (row["Defend"] - base) * weights["Defend"]
+        # Outfield Player Formula (matching your second image)
+        power_ranking = (
+            row["PWR"] * 0.25 +
+            row["Speed"] * 0.15 +
+            row["Shoot"] * 0.20 +
+            row["Dribble"] * 0.15 +
+            row["Pass"] * 0.10 +
+            row["Defend"] * 0.05 +
+            row["Explosiveness"] * 0.10
         )
-
-    power_ranking = base + bonus
-
+    
     return round(power_ranking, 2)
 
 
@@ -137,11 +114,26 @@ rarity_filter = st.sidebar.multiselect(
     sorted(df["Rarity"].unique())
 )
 
+# Display options
+st.sidebar.header("Display Options")
+max_rows = st.sidebar.slider(
+    "Number of players to display",
+    min_value=10,
+    max_value=min(500, len(df)),  # Allow up to 500 players
+    value=min(100, len(df)),
+    step=10
+)
+
+# Apply filters
+filtered_df = df.copy()
 if pos_filter:
-    df = df[df["Pos"].isin(pos_filter)]
+    filtered_df = filtered_df[filtered_df["Pos"].isin(pos_filter)]
 
 if rarity_filter:
-    df = df[df["Rarity"].isin(rarity_filter)]
+    filtered_df = filtered_df[filtered_df["Rarity"].isin(rarity_filter)]
+
+# Show top N players
+filtered_df = filtered_df.head(max_rows)
 
 
 # --------------------------------------------------
@@ -164,8 +156,30 @@ display_cols = [
     "Explosiveness"
 ]
 
+# Add Goalkeeping column for GK rows
+if "Goalkeeping" in df.columns:
+    display_cols.append("Goalkeeping")
 
-styled = df[display_cols].style.background_gradient(
+# Display stats
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Players", len(df))
+with col2:
+    st.metric("Players Displayed", len(filtered_df))
+with col3:
+    st.metric("Max Power Ranking", f"{filtered_df['Power Ranking'].max():.2f}")
+
+# Format the Power Ranking column to show 2 decimal places
+styled = filtered_df[display_cols].style.format({
+    "Power Ranking": "{:.2f}",
+    "PWR": "{:.0f}",
+    "Speed": "{:.0f}",
+    "Shoot": "{:.0f}",
+    "Dribble": "{:.0f}",
+    "Pass": "{:.0f}",
+    "Defend": "{:.0f}",
+    "Explosiveness": "{:.0f}"
+}).background_gradient(
     subset=[
         "Power Ranking",
         "Speed",
@@ -181,8 +195,19 @@ styled = df[display_cols].style.background_gradient(
 
 st.dataframe(
     styled,
-    use_container_width=True
+    use_container_width=True,
+    height=600
 )
 
 
-st.caption("Live data from GitHub main branch")
+st.caption(f"Live data from GitHub main branch - Showing {len(filtered_df)} players")
+
+# Add download button
+if st.button("📥 Download Full Rankings as CSV"):
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Click to Download",
+        data=csv,
+        file_name="player_power_rankings.csv",
+        mime="text/csv"
+    )
