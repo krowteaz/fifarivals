@@ -1,4 +1,4 @@
-Name,Pos,Nationality,Season,Rarity,PWR,Speed,Shoot,Dribble,Pass,Defend,Explosiveness
-Luis Diaz,FW,Colombia,adidas: The Choice,Mythical,100,100,99,99,91,70,101
-Gianluigi Donnarumma,GK,Italy,adidas: The Choice,Mythical,101,91,86,0,86,100,101
-Mohamed Salah,FW,Egypt,adidas Radiant Blaze,Mythical,96,94,94,93,92,72,94
+Name,Pos,Nationality,Season,Rarity,PWR,Speed,Shoot,Dribble,Pass,Defend,Explosiveness,Goalkeeping
+Luis Diaz,FW,Colombia,adidas: The Choice,Mythical,100,100,99,99,91,70,101,0
+Mohamed Salah,FW,Egypt,adidas Radiant Blaze,Mythical,100,98,99,97,97,75,98,0
+Gianluigi Donnarumma,GK,Italy,adidas: The Choice,Mythical,101,91,0,0,86,100,101,105
