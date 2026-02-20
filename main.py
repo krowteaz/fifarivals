@@ -40,23 +40,18 @@ def load_data():
 # Correct formula that matches game Power Ranking
 def compute_power_ranking(row):
 
-    base = (
-        row["Speed"] * 0.20 +
-        row["Shoot"] * 0.17 +
-        row["Dribble"] * 0.17 +
-        row["Pass"] * 0.06 +
-        row["Defend"] * 0.02 +
+    stats_component = (
+        row["Speed"] * 0.18 +
+        row["Shoot"] * 0.22 +
+        row["Dribble"] * 0.18 +
+        row["Pass"] * 0.12 +
+        row["Defend"] * 0.05 +
         row["Explosiveness"] * 0.25
     )
 
-    bonus = row["Explosiveness"] * 0.10
-
-    multiplier = 1 + ((row["PWR"] - 95) / 50)
-
-    power_ranking = (base + bonus) * multiplier
+    power_ranking = (stats_component * 0.6) + (row["PWR"] * 0.4)
 
     return round(power_ranking, 2)
-
 
 # Load data
 df = load_data()
@@ -121,3 +116,4 @@ except Exception:
 
 
 st.caption("Live data from GitHub main branch")
+
