@@ -1,17 +1,29 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Player Power Ranking", layout="wide")
+# --------------------------------------------------
+# Page config
+# --------------------------------------------------
+st.set_page_config(
+    page_title="Player Power Ranking",
+    layout="wide"
+)
 
 st.title("⚽ Player Power Ranking (Live from GitHub)")
 
-# GitHub RAW CSV
+
+# --------------------------------------------------
+# GitHub CSV source
+# --------------------------------------------------
 GITHUB_CSV = "https://raw.githubusercontent.com/krowteaz/fifarivals/main/players.csv"
 
 
-# Load CSV safely
+# --------------------------------------------------
+# Load data safely with caching
+# --------------------------------------------------
 @st.cache_data(ttl=60)
 def load_data():
+
     try:
         df = pd.read_csv(GITHUB_CSV)
 
@@ -26,23 +38,33 @@ def load_data():
             "Goalkeeping"
         ]
 
-        # Ensure numeric
+        # Ensure numeric columns exist and are numeric
         for col in numeric_cols:
+
             if col not in df.columns:
                 df[col] = 0
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+            df[col] = pd.to_numeric(
+                df[col],
+                errors="coerce"
+            ).fillna(0)
 
         return df
 
     except Exception as e:
-        st.error("Failed to load CSV from GitHub")
+
+        st.error("Failed to load GitHub CSV")
         st.code(str(e))
+
         return pd.DataFrame()
 
 
-# Correct Power Ranking formula
+# --------------------------------------------------
+# Exact Power Ranking formula matching Excel
+# --------------------------------------------------
 def compute_power_ranking(row):
 
+    # Goalkeeper formula
     if row["Pos"] == "GK":
 
         power_ranking = (
@@ -54,6 +76,7 @@ def compute_power_ranking(row):
             row["PWR"] * 0.05
         )
 
+    # Field player formula (FW, MF, DF)
     else:
 
         power_ranking = (
@@ -69,29 +92,42 @@ def compute_power_ranking(row):
     return round(power_ranking, 2)
 
 
+# --------------------------------------------------
 # Load data
+# --------------------------------------------------
 df = load_data()
 
 if df.empty:
     st.stop()
 
 
+# --------------------------------------------------
 # Compute Power Ranking
-df["Power Ranking"] = df.apply(compute_power_ranking, axis=1)
+# --------------------------------------------------
+df["Power Ranking"] = df.apply(
+    compute_power_ranking,
+    axis=1
+)
 
 
+# --------------------------------------------------
 # Compute Rank
+# --------------------------------------------------
 df["Rank"] = df["Power Ranking"].rank(
     ascending=False,
     method="min"
 ).astype(int)
 
 
-# Sort by Rank
+# --------------------------------------------------
+# Sort by rank
+# --------------------------------------------------
 df = df.sort_values("Rank")
 
 
+# --------------------------------------------------
 # Sidebar filters
+# --------------------------------------------------
 st.sidebar.header("Filters")
 
 pos_filter = st.sidebar.multiselect(
@@ -111,7 +147,9 @@ if rarity_filter:
     df = df[df["Rarity"].isin(rarity_filter)]
 
 
-# Display columns
+# --------------------------------------------------
+# Columns to display
+# --------------------------------------------------
 display_cols = [
     "Rank",
     "Power Ranking",
@@ -126,38 +164,52 @@ display_cols = [
     "Dribble",
     "Pass",
     "Defend",
-    "Explosiveness"
+    "Explosiveness",
+    "Goalkeeping"
 ]
 
-if "Goalkeeping" in df.columns:
-    display_cols.append("Goalkeeping")
+
+# Only show columns that exist
+display_cols = [
+    col for col in display_cols if col in df.columns
+]
 
 
-# Heatmap styling
+# --------------------------------------------------
+# Display table with heatmap
+# --------------------------------------------------
 try:
 
     styled = df[display_cols].style.background_gradient(
         subset=[
-            "Power Ranking",
-            "Speed",
-            "Shoot",
-            "Dribble",
-            "Pass",
-            "Defend",
-            "Explosiveness"
+            col for col in [
+                "Power Ranking",
+                "Speed",
+                "Shoot",
+                "Dribble",
+                "Pass",
+                "Defend",
+                "Explosiveness",
+                "Goalkeeping"
+            ] if col in df.columns
         ],
         cmap="RdYlGn"
     )
 
-    st.dataframe(styled, use_container_width=True)
+    st.dataframe(
+        styled,
+        use_container_width=True
+    )
 
-except Exception:
+except:
 
-    st.dataframe(df[display_cols], use_container_width=True)
+    st.dataframe(
+        df[display_cols],
+        use_container_width=True
+    )
 
 
+# --------------------------------------------------
+# Footer
+# --------------------------------------------------
 st.caption("Live data from GitHub main branch")
-
-
-
-
