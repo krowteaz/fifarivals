@@ -5,8 +5,8 @@ st.set_page_config(page_title="Player Power Ranking", layout="wide")
 
 st.title("⚽ Player Power Ranking (Live from GitHub)")
 
-# Your GitHub RAW CSV URL
-GITHUB_CSV = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/players.csv"
+# GitHub RAW CSV URL
+GITHUB_CSV = "https://raw.githubusercontent.com/krowteaz/fifarivals/main/players.csv"
 
 # Power Ranking formula
 WEIGHTS = {
@@ -75,3 +75,4 @@ styled = df.style.background_gradient(
 st.dataframe(styled, use_container_width=True)
 
 st.caption("Live data from GitHub master branch")
+
