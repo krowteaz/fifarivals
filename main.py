@@ -43,30 +43,28 @@ def load_data():
 # Correct Power Ranking formula
 def compute_power_ranking(row):
 
-    # GK formula
     if row["Pos"] == "GK":
 
-        power_ranking = (
-            row["Goalkeeping"] * 0.60 +
-            row["Defend"] * 0.10 +
-            row["Pass"] * 0.08 +
-            row["Explosiveness"] * 0.07 +
-            row["Speed"] * 0.05 +
-            row["PWR"] * 0.10
+        bonus = (
+            (row["Goalkeeping"] - row["PWR"]) * 0.40 +
+            (row["Defend"] - row["PWR"]) * 0.10 +
+            (row["Pass"] - row["PWR"]) * 0.05 +
+            (row["Explosiveness"] - row["PWR"]) * 0.05 +
+            (row["Speed"] - row["PWR"]) * 0.05
         )
 
-    # FW MF DF formula (EXACT MATCH TO EXCEL)
     else:
 
-        power_ranking = (
-            row["Speed"] * 0.18 +
-            row["Shoot"] * 0.22 +
-            row["Dribble"] * 0.18 +
-            row["Pass"] * 0.12 +
-            row["Defend"] * 0.05 +
-            row["Explosiveness"] * 0.23 +
-            row["PWR"] * 0.02
+        bonus = (
+            (row["Speed"] - row["PWR"]) * 0.12 +
+            (row["Shoot"] - row["PWR"]) * 0.18 +
+            (row["Dribble"] - row["PWR"]) * 0.14 +
+            (row["Pass"] - row["PWR"]) * 0.08 +
+            (row["Defend"] - row["PWR"]) * 0.05 +
+            (row["Explosiveness"] - row["PWR"]) * 0.22
         )
+
+    power_ranking = row["PWR"] + bonus
 
     return round(power_ranking, 2)
 
@@ -158,4 +156,5 @@ except Exception:
 
 
 st.caption("Live data from GitHub main branch")
+
 
