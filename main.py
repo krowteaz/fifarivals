@@ -45,28 +45,41 @@ def compute_power_ranking(row):
 
     if row["Pos"] == "GK":
 
+        core_avg = (
+            row["Goalkeeping"] +
+            row["Defend"] +
+            row["Pass"] +
+            row["Explosiveness"] +
+            row["Speed"]
+        ) / 5
+
         bonus = (
-            (row["Goalkeeping"] - row["PWR"]) * 0.40 +
-            (row["Defend"] - row["PWR"]) * 0.10 +
-            (row["Pass"] - row["PWR"]) * 0.05 +
-            (row["Explosiveness"] - row["PWR"]) * 0.05 +
-            (row["Speed"] - row["PWR"]) * 0.05
+            (row["Goalkeeping"] - core_avg) * 0.35 +
+            (row["Defend"] - core_avg) * 0.10 +
+            (row["Explosiveness"] - core_avg) * 0.15
         )
 
     else:
 
+        core_avg = (
+            row["Speed"] +
+            row["Shoot"] +
+            row["Dribble"] +
+            row["Pass"] +
+            row["Defend"] +
+            row["Explosiveness"]
+        ) / 6
+
         bonus = (
-            (row["Speed"] - row["PWR"]) * 0.12 +
-            (row["Shoot"] - row["PWR"]) * 0.18 +
-            (row["Dribble"] - row["PWR"]) * 0.14 +
-            (row["Pass"] - row["PWR"]) * 0.08 +
-            (row["Defend"] - row["PWR"]) * 0.05 +
-            (row["Explosiveness"] - row["PWR"]) * 0.22
+            (row["Shoot"] - core_avg) * 0.25 +
+            (row["Explosiveness"] - core_avg) * 0.30 +
+            (row["Speed"] - core_avg) * 0.15
         )
 
-    power_ranking = row["PWR"] + bonus
+    power_ranking = core_avg + bonus
 
     return round(power_ranking, 2)
+
 
 # Load data
 df = load_data()
@@ -156,5 +169,6 @@ except Exception:
 
 
 st.caption("Live data from GitHub main branch")
+
 
 
