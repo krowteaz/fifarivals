@@ -8,35 +8,62 @@ st.title("⚽ Player Power Ranking (Live from GitHub)")
 # GitHub RAW CSV URL
 GITHUB_CSV = "https://raw.githubusercontent.com/krowteaz/fifarivals/main/players.csv"
 
-# Power Ranking formula
-WEIGHTS = {
-    "PWR": 0.35,
-    "Speed": 0.20,
-    "Shoot": 0.15,
-    "Dribble": 0.15,
-    "Pass": 0.05,
-    "Defend": 0.02,
-    "Explosiveness": 0.35
-}
 
+# Load data safely
 @st.cache_data(ttl=60)
 def load_data():
-    df = pd.read_csv(GITHUB_CSV)
-    return df
+    try:
+        df = pd.read_csv(GITHUB_CSV)
 
+        # Ensure numeric columns are numeric
+        numeric_cols = [
+            "PWR",
+            "Speed",
+            "Shoot",
+            "Dribble",
+            "Pass",
+            "Defend",
+            "Explosiveness"
+        ]
+
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+        return df
+
+    except Exception as e:
+        st.error("Failed to load GitHub CSV")
+        st.code(str(e))
+        return pd.DataFrame()
+
+
+# Correct formula that matches game Power Ranking
 def compute_power_ranking(row):
-    return round(
-        row["PWR"] * WEIGHTS["PWR"] +
-        row["Speed"] * WEIGHTS["Speed"] +
-        row["Shoot"] * WEIGHTS["Shoot"] +
-        row["Dribble"] * WEIGHTS["Dribble"] +
-        row["Pass"] * WEIGHTS["Pass"] +
-        row["Defend"] * WEIGHTS["Defend"] +
-        row["Explosiveness"] * WEIGHTS["Explosiveness"],
-        2
+
+    base = (
+        row["Speed"] * 0.20 +
+        row["Shoot"] * 0.17 +
+        row["Dribble"] * 0.17 +
+        row["Pass"] * 0.06 +
+        row["Defend"] * 0.02 +
+        row["Explosiveness"] * 0.25
     )
 
+    bonus = row["Explosiveness"] * 0.10
+
+    multiplier = 1 + ((row["PWR"] - 95) / 50)
+
+    power_ranking = (base + bonus) * multiplier
+
+    return round(power_ranking, 2)
+
+
+# Load data
 df = load_data()
+
+if df.empty:
+    st.stop()
+
 
 # Compute ranking
 df["Power Ranking"] = df.apply(compute_power_ranking, axis=1)
@@ -48,9 +75,20 @@ df["Rank"] = df["Power Ranking"].rank(
 
 df = df.sort_values("Rank")
 
-# Filters
-pos = st.sidebar.multiselect("Position", df["Pos"].unique())
-rarity = st.sidebar.multiselect("Rarity", df["Rarity"].unique())
+
+# Sidebar filters
+st.sidebar.header("Filters")
+
+pos = st.sidebar.multiselect(
+    "Position",
+    sorted(df["Pos"].dropna().unique())
+)
+
+rarity = st.sidebar.multiselect(
+    "Rarity",
+    sorted(df["Rarity"].dropna().unique())
+)
+
 
 if pos:
     df = df[df["Pos"].isin(pos)]
@@ -58,21 +96,28 @@ if pos:
 if rarity:
     df = df[df["Rarity"].isin(rarity)]
 
-# Heatmap
-styled = df.style.background_gradient(
-    subset=[
-        "Power Ranking",
-        "Speed",
-        "Shoot",
-        "Dribble",
-        "Pass",
-        "Defend",
-        "Explosiveness"
-    ],
-    cmap="RdYlGn"
-)
 
-st.dataframe(styled, use_container_width=True)
+# Heatmap styling with fallback
+try:
 
-st.caption("Live data from GitHub master branch")
+    styled = df.style.background_gradient(
+        subset=[
+            "Power Ranking",
+            "Speed",
+            "Shoot",
+            "Dribble",
+            "Pass",
+            "Defend",
+            "Explosiveness"
+        ],
+        cmap="RdYlGn"
+    )
 
+    st.dataframe(styled, use_container_width=True)
+
+except Exception:
+
+    st.dataframe(df, use_container_width=True)
+
+
+st.caption("Live data from GitHub main branch")
