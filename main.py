@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from scipy.optimize import minimize
 
 # --------------------------------------------------
 # Page setup
@@ -7,12 +9,81 @@ import pandas as pd
 st.set_page_config(page_title="Player Power Ranking", layout="wide")
 
 st.title("⚽ Player Power Ranking (Live from GitHub)")
+st.subheader("📊 Reverse Engineered Formula")
 
 
 # --------------------------------------------------
 # CSV source
 # --------------------------------------------------
 GITHUB_CSV = "https://raw.githubusercontent.com/krowteaz/fifarivals/main/players.csv"
+
+
+# --------------------------------------------------
+# Known data from your image
+# --------------------------------------------------
+KNOWN_DATA = [
+    {"name": "Luis Diaz", "PWR": 100, "Speed": 100, "Shoot": 99, "Dribble": 99, "Pass": 91, "Defend": 70, "Explosiveness": 101, "target": 101.41},
+    {"name": "Mohamed Salah", "PWR": 100, "Speed": 98, "Shoot": 99, "Dribble": 97, "Pass": 97, "Defend": 75, "Explosiveness": 98, "target": 100.94},
+    {"name": "Erling Haaland", "PWR": 100, "Speed": 99, "Shoot": 102, "Dribble": 96, "Pass": 81, "Defend": 83, "Explosiveness": 90, "target": 100.05},
+    {"name": "Cristiano Ronaldo", "PWR": 100, "Speed": 95, "Shoot": 102, "Dribble": 98, "Pass": 78, "Defend": 76, "Explosiveness": 90, "target": 100.05},
+    {"name": "Lionel Messi", "PWR": 100, "Speed": 91, "Shoot": 100, "Dribble": 100, "Pass": 102, "Defend": 76, "Explosiveness": 92, "target": 99.58},
+    {"name": "Bukayo Saka", "PWR": 99, "Speed": 95, "Shoot": 97, "Dribble": 98, "Pass": 94, "Defend": 78, "Explosiveness": 97, "target": 99.48},
+    {"name": "Harry Kane", "PWR": 99, "Speed": 85, "Shoot": 104, "Dribble": 96, "Pass": 100, "Defend": 71, "Explosiveness": 95, "target": 99.11},
+    {"name": "Viktor Gyökeres", "PWR": 97, "Speed": 99, "Shoot": 96, "Dribble": 93, "Pass": 87, "Defend": 79, "Explosiveness": 95, "target": 98.13}
+]
+
+
+# --------------------------------------------------
+# Reverse engineer weights using optimization
+# --------------------------------------------------
+def find_optimal_weights():
+    """Use optimization to find weights that best match known data"""
+    
+    def objective(weights):
+        """
+        weights = [w_pwr, w_speed, w_shoot, w_dribble, w_pass, w_defend, w_explosiveness]
+        """
+        total_error = 0
+        for player in KNOWN_DATA:
+            calculated = (
+                player["PWR"] * weights[0] +
+                player["Speed"] * weights[1] +
+                player["Shoot"] * weights[2] +
+                player["Dribble"] * weights[3] +
+                player["Pass"] * weights[4] +
+                player["Defend"] * weights[5] +
+                player["Explosiveness"] * weights[6]
+            )
+            error = (calculated - player["target"]) ** 2
+            total_error += error
+        return total_error
+    
+    # Initial guess - all weights equal
+    initial_weights = [0.2, 0.1, 0.15, 0.1, 0.1, 0.05, 0.3]
+    
+    # Bounds: weights should be positive
+    bounds = [(0, 1) for _ in range(7)]
+    
+    # Optimize
+    result = minimize(objective, initial_weights, bounds=bounds, method='L-BFGS-B')
+    
+    return result.x
+
+
+# Find optimal weights
+optimal_weights = find_optimal_weights()
+
+# Display the found weights
+st.sidebar.header("🔍 Reverse Engineered Weights")
+st.sidebar.write("Based on your 8 players:")
+st.sidebar.write(f"PWR: {optimal_weights[0]:.3f}")
+st.sidebar.write(f"Speed: {optimal_weights[1]:.3f}")
+st.sidebar.write(f"Shoot: {optimal_weights[2]:.3f}")
+st.sidebar.write(f"Dribble: {optimal_weights[3]:.3f}")
+st.sidebar.write(f"Pass: {optimal_weights[4]:.3f}")
+st.sidebar.write(f"Defend: {optimal_weights[5]:.3f}")
+st.sidebar.write(f"Explosiveness: {optimal_weights[6]:.3f}")
+st.sidebar.write(f"Total: {sum(optimal_weights):.3f}")
 
 
 # --------------------------------------------------
@@ -48,39 +119,26 @@ def load_data():
 
 
 # --------------------------------------------------
-# EXACT Power Ranking formula calibrated for Luis Diaz = 101.4
+# Power Ranking formula with optimized weights
 # --------------------------------------------------
 def compute_power_ranking(row):
-    """
-    Formula calibrated for Luis Diaz = 101.4:
-    PWR: 0.454 (45.4%)
-    All other stats: 0.10 (10% each)
-    Total: 1.054 (105.4%)
-    """
-    
     if row["Pos"] == "GK":
-        # For goalkeepers, adjust as needed
+        # For goalkeepers, use a simpler formula
         power_ranking = (
-            row["PWR"] * 0.454 +
-            row["Goalkeeping"] * 0.20 +
-            row["Explosiveness"] * 0.10 +
-            row["Speed"] * 0.10 +
-            row["Defend"] * 0.10 +
-            row["Pass"] * 0.10 +
-            row["Dribble"] * 0.054  # Remaining weight
+            row["PWR"] * 0.4 +
+            row["Goalkeeping"] * 0.3 +
+            row["Explosiveness"] * 0.3
         )
     else:
-        # Outfield Player Formula - calibrated weights
         power_ranking = (
-            row["PWR"] * 0.454 +           # 45.4% weight on base PWR
-            row["Speed"] * 0.10 +           # 10% weight
-            row["Shoot"] * 0.10 +           # 10% weight
-            row["Dribble"] * 0.10 +         # 10% weight
-            row["Pass"] * 0.10 +            # 10% weight
-            row["Defend"] * 0.10 +          # 10% weight
-            row["Explosiveness"] * 0.10     # 10% weight
+            row["PWR"] * optimal_weights[0] +
+            row["Speed"] * optimal_weights[1] +
+            row["Shoot"] * optimal_weights[2] +
+            row["Dribble"] * optimal_weights[3] +
+            row["Pass"] * optimal_weights[4] +
+            row["Defend"] * optimal_weights[5] +
+            row["Explosiveness"] * optimal_weights[6]
         )
-        # Total multiplier is 1.054, so players can exceed 100
     
     return round(power_ranking, 2)
 
@@ -140,7 +198,6 @@ if total_players > 0:
     )
 else:
     max_rows = 10
-    st.sidebar.warning("No player data available")
 
 # Apply filters
 filtered_df = df.copy()
@@ -156,8 +213,68 @@ filtered_df = filtered_df.head(display_count)
 
 
 # --------------------------------------------------
-# Display
+# Verification Table
 # --------------------------------------------------
+st.header("✅ Formula Verification")
+
+# Create verification dataframe
+verification_data = []
+for player in KNOWN_DATA:
+    player_row = df[df["Name"] == player["name"]]
+    if not player_row.empty:
+        calculated = player_row["Power Ranking"].values[0]
+        verification_data.append({
+            "Player": player["name"],
+            "Calculated": calculated,
+            "Target": player["target"],
+            "Difference": calculated - player["target"],
+            "Match": abs(calculated - player["target"]) < 0.1
+        })
+
+if verification_data:
+    verification_df = pd.DataFrame(verification_data)
+    
+    # Style the verification table
+    def color_difference(val):
+        if abs(val) < 0.1:
+            return 'background-color: #90EE90'
+        elif abs(val) < 0.5:
+            return 'background-color: #FFFF99'
+        else:
+            return 'background-color: #FFB6C6'
+    
+    styled_verification = verification_df.style.format({
+        "Calculated": "{:.2f}",
+        "Target": "{:.2f}",
+        "Difference": "{:+.2f}"
+    }).applymap(color_difference, subset=["Difference"])
+    
+    st.dataframe(styled_verification, use_container_width=True)
+    
+    # Calculate accuracy
+    matches = verification_df["Match"].sum()
+    accuracy = (matches / len(verification_df)) * 100
+    st.metric("Accuracy on known players", f"{accuracy:.1f}%")
+    
+    # Show the formula used
+    st.info(f"""
+    **Formula used:**
+    PWR × {optimal_weights[0]:.3f} + 
+    Speed × {optimal_weights[1]:.3f} + 
+    Shoot × {optimal_weights[2]:.3f} + 
+    Dribble × {optimal_weights[3]:.3f} + 
+    Pass × {optimal_weights[4]:.3f} + 
+    Defend × {optimal_weights[5]:.3f} + 
+    Explosiveness × {optimal_weights[6]:.3f}
+    = **{sum(optimal_weights):.3f} total multiplier**
+    """)
+
+
+# --------------------------------------------------
+# Main Display
+# --------------------------------------------------
+st.header("📊 Player Power Rankings")
+
 display_cols = [
     "Rank",
     "Power Ranking",
@@ -175,26 +292,6 @@ display_cols = [
     "Explosiveness"
 ]
 
-# Add Goalkeeping column for GK rows
-if "Goalkeeping" in df.columns:
-    display_cols.append("Goalkeeping")
-
-# Display stats
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Total Players", len(df))
-with col2:
-    st.metric("Players Displayed", len(filtered_df))
-with col3:
-    if len(filtered_df) > 0:
-        st.metric("Max Power Ranking", f"{filtered_df['Power Ranking'].max():.2f}")
-    else:
-        st.metric("Max Power Ranking", "N/A")
-
-# Show formula info
-st.info("📊 Using formula: PWR(45.4%) + Speed(10%) + Shoot(10%) + Dribble(10%) + Pass(10%) + Defend(10%) + Explosiveness(10%) = 105.4% total")
-
-# Format and display
 if len(filtered_df) > 0:
     format_dict = {
         "Power Ranking": "{:.2f}",
@@ -218,65 +315,10 @@ if len(filtered_df) > 0:
         height=600
     )
     
-    # Calculate what Luis Diaz should be based on this formula
-    luis_diaz = filtered_df[filtered_df["Name"] == "Luis Diaz"]
-    if not luis_diaz.empty:
-        st.subheader("✅ Luis Diaz Calculation Check")
-        luis_stats = luis_diaz.iloc[0]
-        calculated = (
-            luis_stats["PWR"] * 0.454 +
-            luis_stats["Speed"] * 0.10 +
-            luis_stats["Shoot"] * 0.10 +
-            luis_stats["Dribble"] * 0.10 +
-            luis_stats["Pass"] * 0.10 +
-            luis_stats["Defend"] * 0.10 +
-            luis_stats["Explosiveness"] * 0.10
-        )
-        
-        # Create columns for the check
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Calculated", f"{calculated:.2f}")
-        with col2:
-            st.metric("Target", "101.40")
-        with col3:
-            st.metric("Difference", f"{calculated - 101.40:+.2f}")
-        
-        # Show the detailed calculation
-        with st.expander("Show detailed calculation"):
-            st.code(f"""
-            Luis Diaz Calculation:
-            PWR (100 × 0.454) = {100 * 0.454:.2f}
-            Speed (100 × 0.10) = {100 * 0.10:.2f}
-            Shoot (99 × 0.10) = {99 * 0.10:.2f}
-            Dribble (99 × 0.10) = {99 * 0.10:.2f}
-            Pass (91 × 0.10) = {91 * 0.10:.2f}
-            Defend (70 × 0.10) = {70 * 0.10:.2f}
-            Explosiveness (101 × 0.10) = {101 * 0.10:.2f}
-            {'='*40}
-            TOTAL = {calculated:.2f}
-            """)
-    
-    # Also check Mohamed Salah
-    mohamed_salah = filtered_df[filtered_df["Name"] == "Mohamed Salah"]
-    if not mohamed_salah.empty:
-        salah_stats = mohamed_salah.iloc[0]
-        salah_calc = (
-            salah_stats["PWR"] * 0.454 +
-            salah_stats["Speed"] * 0.10 +
-            salah_stats["Shoot"] * 0.10 +
-            salah_stats["Dribble"] * 0.10 +
-            salah_stats["Pass"] * 0.10 +
-            salah_stats["Defend"] * 0.10 +
-            salah_stats["Explosiveness"] * 0.10
-        )
-        st.subheader("✅ Mohamed Salah Calculation Check")
-        st.metric("Mohamed Salah", f"{salah_calc:.2f}", delta=f"{salah_calc - 100.94:.2f} vs target 100.94")
-    
 else:
     st.warning("No players match the selected filters")
 
-st.caption(f"Live data from GitHub main branch - Using weights: PWR(0.454) + others(0.10 each) = 1.054 total")
+st.caption(f"Live data from GitHub main branch - Using reverse engineered weights")
 
 # Add download button
 if st.button("📥 Download Full Rankings as CSV"):
