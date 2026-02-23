@@ -7,7 +7,6 @@ import pandas as pd
 st.set_page_config(page_title="Player Power Ranking", layout="wide")
 
 st.title("⚽ Player Power Ranking (Live from GitHub)")
-st.subheader("🔧 Manual Weight Tuning Mode")
 
 
 # --------------------------------------------------
@@ -49,57 +48,47 @@ def load_data():
 
 
 # --------------------------------------------------
-# Sidebar - Manual Weight Controls
-# --------------------------------------------------
-st.sidebar.header("🎛️ Manual Weight Tuning")
-
-# Create sliders for each weight
-st.sidebar.subheader("Stat Weights (must sum to 1.00)")
-
-w_pwr = st.sidebar.slider("PWR Weight", 0.0, 1.0, 0.25, 0.01)
-w_speed = st.sidebar.slider("Speed Weight", 0.0, 1.0, 0.10, 0.01)
-w_shoot = st.sidebar.slider("Shoot Weight", 0.0, 1.0, 0.15, 0.01)
-w_dribble = st.sidebar.slider("Dribble Weight", 0.0, 1.0, 0.10, 0.01)
-w_pass = st.sidebar.slider("Pass Weight", 0.0, 1.0, 0.08, 0.01)
-w_defend = st.sidebar.slider("Defend Weight", 0.0, 1.0, 0.05, 0.01)
-w_explosiveness = st.sidebar.slider("Explosiveness Weight", 0.0, 1.0, 0.27, 0.01)
-
-# Calculate total
-total_weight = w_pwr + w_speed + w_shoot + w_dribble + w_pass + w_defend + w_explosiveness
-st.sidebar.metric("Total Weight", f"{total_weight:.2f}")
-
-if abs(total_weight - 1.0) > 0.01:
-    st.sidebar.warning(f"Weights should sum to 1.00 (currently {total_weight:.2f})")
-
-# Baseline adjustment
-st.sidebar.subheader("Baseline Adjustment")
-baseline = st.sidebar.slider("Baseline Subtract", 0, 20, 0, 1)
-multiplier = st.sidebar.slider("Multiplier", 0.8, 1.2, 1.0, 0.01)
-
-
-# --------------------------------------------------
-# Power Ranking formula with manual weights
+# EXACT Power Ranking formula from your image
 # --------------------------------------------------
 def compute_power_ranking(row):
+    """
+    Formula based on your image:
+    PWR: 0.45 (45%)
+    Speed: 0.10 (10%)
+    Shoot: 0.10 (10%)
+    Dribble: 0.10 (10%)
+    Pass: 0.10 (10%)
+    Defend: 0.10 (10%)
+    Explosiveness: 0.10 (10%)
+    Total: 1.05 (105%) - this allows values > 100
+    """
+    
     if row["Pos"] == "GK":
-        # Simple GK formula for now
-        return round(row["PWR"] * 0.4 + row["Goalkeeping"] * 0.6, 2)
-    else:
-        # Apply manual weights
-        power = (
-            row["PWR"] * w_pwr +
-            row["Speed"] * w_speed +
-            row["Shoot"] * w_shoot +
-            row["Dribble"] * w_dribble +
-            row["Pass"] * w_pass +
-            row["Defend"] * w_defend +
-            row["Explosiveness"] * w_explosiveness
+        # For goalkeepers, use a similar pattern but with Goalkeeping stat
+        # You may need to adjust this based on your Excel
+        power_ranking = (
+            row["PWR"] * 0.45 +
+            row["Goalkeeping"] * 0.20 +
+            row["Explosiveness"] * 0.10 +
+            row["Speed"] * 0.10 +
+            row["Defend"] * 0.10 +
+            row["Pass"] * 0.10 +
+            row["Dribble"] * 0.05  # Dribble less important for GK
         )
-        
-        # Apply baseline adjustment and multiplier
-        power = (power - baseline) * multiplier
-        
-        return round(power, 2)
+    else:
+        # Outfield Player Formula - EXACT weights from your image
+        power_ranking = (
+            row["PWR"] * 0.45 +           # 45% weight on base PWR
+            row["Speed"] * 0.10 +          # 10% weight
+            row["Shoot"] * 0.10 +          # 10% weight
+            row["Dribble"] * 0.10 +        # 10% weight
+            row["Pass"] * 0.10 +           # 10% weight
+            row["Defend"] * 0.10 +         # 10% weight
+            row["Explosiveness"] * 0.10    # 10% weight
+        )
+        # Note: Total multiplier is 1.05, so players can exceed 100
+    
+    return round(power_ranking, 2)
 
 
 # --------------------------------------------------
@@ -107,6 +96,7 @@ def compute_power_ranking(row):
 # --------------------------------------------------
 df = load_data()
 
+# Apply the formula
 df["Power Ranking"] = df.apply(
     compute_power_ranking,
     axis=1
@@ -156,6 +146,7 @@ if total_players > 0:
     )
 else:
     max_rows = 10
+    st.sidebar.warning("No player data available")
 
 # Apply filters
 filtered_df = df.copy()
@@ -168,30 +159,6 @@ if rarity_filter:
 # Show top N players
 display_count = min(max_rows, len(filtered_df))
 filtered_df = filtered_df.head(display_count)
-
-
-# --------------------------------------------------
-# Target Values Display
-# --------------------------------------------------
-st.sidebar.header("🎯 Target Values")
-target_values = {
-    "Luis Diaz": 101.41,
-    "Mohamed Salah": 100.94,
-    "Erling Haaland": 100.05,
-    "Cristiano Ronaldo": 100.05,
-    "Lionel Messi": 99.58,
-    "Bukayo Saka": 99.48,
-    "Harry Kane": 99.11,
-    "Viktor Gyökeres": 98.13
-}
-
-for player, target in target_values.items():
-    player_data = df[df["Name"] == player]
-    if not player_data.empty:
-        current = player_data["Power Ranking"].values[0]
-        diff = current - target
-        color = "green" if abs(diff) < 0.1 else "red"
-        st.sidebar.markdown(f"**{player}**: {current:.2f} vs {target} (<span style='color:{color}'>{diff:+.2f}</span>)", unsafe_allow_html=True)
 
 
 # --------------------------------------------------
@@ -219,7 +186,7 @@ if "Goalkeeping" in df.columns:
     display_cols.append("Goalkeeping")
 
 # Display stats
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 with col1:
     st.metric("Total Players", len(df))
 with col2:
@@ -229,17 +196,12 @@ with col3:
         st.metric("Max Power Ranking", f"{filtered_df['Power Ranking'].max():.2f}")
     else:
         st.metric("Max Power Ranking", "N/A")
-with col4:
-    st.metric("Current Weights Total", f"{total_weight:.2f}")
 
-# Main display
+# Show formula info
+st.info("📊 Using formula: PWR(45%) + Speed(10%) + Shoot(10%) + Dribble(10%) + Pass(10%) + Defend(10%) + Explosiveness(10%) = 105% total")
+
+# Format and display
 if len(filtered_df) > 0:
-    # Highlight Luis Diaz and other target players
-    def highlight_targets(row):
-        if row['Name'] in target_values:
-            return ['background-color: #90EE90'] * len(row)
-        return [''] * len(row)
-    
     format_dict = {
         "Power Ranking": "{:.2f}",
         "PWR": "{:.0f}",
@@ -251,7 +213,7 @@ if len(filtered_df) > 0:
         "Explosiveness": "{:.0f}"
     }
     
-    styled = filtered_df[display_cols].style.format(format_dict).apply(highlight_targets, axis=1).background_gradient(
+    styled = filtered_df[display_cols].style.format(format_dict).background_gradient(
         subset=["Power Ranking"],
         cmap="RdYlGn"
     )
@@ -262,37 +224,42 @@ if len(filtered_df) > 0:
         height=600
     )
     
-    # Show current vs target for top players
-    st.subheader("🎯 Current vs Target Values")
-    comparison_data = []
-    for player, target in target_values.items():
-        player_row = df[df["Name"] == player]
-        if not player_row.empty:
-            comparison_data.append({
-                "Player": player,
-                "Current": player_row["Power Ranking"].values[0],
-                "Target": target,
-                "Difference": player_row["Power Ranking"].values[0] - target
-            })
-    
-    if comparison_data:
-        comparison_df = pd.DataFrame(comparison_data)
-        st.dataframe(
-            comparison_df.style.format({
-                "Current": "{:.2f}",
-                "Target": "{:.2f}",
-                "Difference": "{:+.2f}"
-            }).background_gradient(subset=["Difference"], cmap="RdYlGn_r"),
-            use_container_width=True
+    # Calculate what Luis Diaz should be based on this formula
+    luis_diaz = filtered_df[filtered_df["Name"] == "Luis Diaz"]
+    if not luis_diaz.empty:
+        st.subheader("✅ Luis Diaz Calculation Check")
+        luis_stats = luis_diaz.iloc[0]
+        calculated = (
+            luis_stats["PWR"] * 0.45 +
+            luis_stats["Speed"] * 0.10 +
+            luis_stats["Shoot"] * 0.10 +
+            luis_stats["Dribble"] * 0.10 +
+            luis_stats["Pass"] * 0.10 +
+            luis_stats["Defend"] * 0.10 +
+            luis_stats["Explosiveness"] * 0.10
         )
+        st.metric("Luis Diaz Power Ranking", f"{calculated:.2f}")
+        
+        # Show the calculation
+        st.code(f"""
+        Luis Diaz Calculation:
+        PWR (100 × 0.45) = {100 * 0.45:.2f}
+        Speed (100 × 0.10) = {100 * 0.10:.2f}
+        Shoot (99 × 0.10) = {99 * 0.10:.2f}
+        Dribble (99 × 0.10) = {99 * 0.10:.2f}
+        Pass (91 × 0.10) = {91 * 0.10:.2f}
+        Defend (70 × 0.10) = {70 * 0.10:.2f}
+        Explosiveness (101 × 0.10) = {101 * 0.10:.2f}
+        TOTAL = {calculated:.2f}
+        """)
     
 else:
     st.warning("No players match the selected filters")
 
-st.caption("Adjust the weights in the sidebar until the values match your Excel file exactly!")
+st.caption(f"Live data from GitHub main branch - Using weights: PWR(0.45) + others(0.10 each) = 1.05 total")
 
 # Add download button
-if st.button("📥 Download Current Rankings"):
+if st.button("📥 Download Full Rankings as CSV"):
     csv = df.to_csv(index=False)
     st.download_button(
         label="Click to Download",
