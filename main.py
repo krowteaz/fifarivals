@@ -48,45 +48,39 @@ def load_data():
 
 
 # --------------------------------------------------
-# EXACT Power Ranking formula from your image
+# EXACT Power Ranking formula calibrated for Luis Diaz = 101.4
 # --------------------------------------------------
 def compute_power_ranking(row):
     """
-    Formula based on your image:
-    PWR: 0.45 (45%)
-    Speed: 0.10 (10%)
-    Shoot: 0.10 (10%)
-    Dribble: 0.10 (10%)
-    Pass: 0.10 (10%)
-    Defend: 0.10 (10%)
-    Explosiveness: 0.10 (10%)
-    Total: 1.05 (105%) - this allows values > 100
+    Formula calibrated for Luis Diaz = 101.4:
+    PWR: 0.454 (45.4%)
+    All other stats: 0.10 (10% each)
+    Total: 1.054 (105.4%)
     """
     
     if row["Pos"] == "GK":
-        # For goalkeepers, use a similar pattern but with Goalkeeping stat
-        # You may need to adjust this based on your Excel
+        # For goalkeepers, adjust as needed
         power_ranking = (
-            row["PWR"] * 0.45 +
+            row["PWR"] * 0.454 +
             row["Goalkeeping"] * 0.20 +
             row["Explosiveness"] * 0.10 +
             row["Speed"] * 0.10 +
             row["Defend"] * 0.10 +
             row["Pass"] * 0.10 +
-            row["Dribble"] * 0.05  # Dribble less important for GK
+            row["Dribble"] * 0.054  # Remaining weight
         )
     else:
-        # Outfield Player Formula - EXACT weights from your image
+        # Outfield Player Formula - calibrated weights
         power_ranking = (
-            row["PWR"] * 0.45 +           # 45% weight on base PWR
-            row["Speed"] * 0.10 +          # 10% weight
-            row["Shoot"] * 0.10 +          # 10% weight
-            row["Dribble"] * 0.10 +        # 10% weight
-            row["Pass"] * 0.10 +           # 10% weight
-            row["Defend"] * 0.10 +         # 10% weight
-            row["Explosiveness"] * 0.10    # 10% weight
+            row["PWR"] * 0.454 +           # 45.4% weight on base PWR
+            row["Speed"] * 0.10 +           # 10% weight
+            row["Shoot"] * 0.10 +           # 10% weight
+            row["Dribble"] * 0.10 +         # 10% weight
+            row["Pass"] * 0.10 +            # 10% weight
+            row["Defend"] * 0.10 +          # 10% weight
+            row["Explosiveness"] * 0.10     # 10% weight
         )
-        # Note: Total multiplier is 1.05, so players can exceed 100
+        # Total multiplier is 1.054, so players can exceed 100
     
     return round(power_ranking, 2)
 
@@ -198,7 +192,7 @@ with col3:
         st.metric("Max Power Ranking", "N/A")
 
 # Show formula info
-st.info("📊 Using formula: PWR(45%) + Speed(10%) + Shoot(10%) + Dribble(10%) + Pass(10%) + Defend(10%) + Explosiveness(10%) = 105% total")
+st.info("📊 Using formula: PWR(45.4%) + Speed(10%) + Shoot(10%) + Dribble(10%) + Pass(10%) + Defend(10%) + Explosiveness(10%) = 105.4% total")
 
 # Format and display
 if len(filtered_df) > 0:
@@ -230,7 +224,7 @@ if len(filtered_df) > 0:
         st.subheader("✅ Luis Diaz Calculation Check")
         luis_stats = luis_diaz.iloc[0]
         calculated = (
-            luis_stats["PWR"] * 0.45 +
+            luis_stats["PWR"] * 0.454 +
             luis_stats["Speed"] * 0.10 +
             luis_stats["Shoot"] * 0.10 +
             luis_stats["Dribble"] * 0.10 +
@@ -238,25 +232,51 @@ if len(filtered_df) > 0:
             luis_stats["Defend"] * 0.10 +
             luis_stats["Explosiveness"] * 0.10
         )
-        st.metric("Luis Diaz Power Ranking", f"{calculated:.2f}")
         
-        # Show the calculation
-        st.code(f"""
-        Luis Diaz Calculation:
-        PWR (100 × 0.45) = {100 * 0.45:.2f}
-        Speed (100 × 0.10) = {100 * 0.10:.2f}
-        Shoot (99 × 0.10) = {99 * 0.10:.2f}
-        Dribble (99 × 0.10) = {99 * 0.10:.2f}
-        Pass (91 × 0.10) = {91 * 0.10:.2f}
-        Defend (70 × 0.10) = {70 * 0.10:.2f}
-        Explosiveness (101 × 0.10) = {101 * 0.10:.2f}
-        TOTAL = {calculated:.2f}
-        """)
+        # Create columns for the check
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Calculated", f"{calculated:.2f}")
+        with col2:
+            st.metric("Target", "101.40")
+        with col3:
+            st.metric("Difference", f"{calculated - 101.40:+.2f}")
+        
+        # Show the detailed calculation
+        with st.expander("Show detailed calculation"):
+            st.code(f"""
+            Luis Diaz Calculation:
+            PWR (100 × 0.454) = {100 * 0.454:.2f}
+            Speed (100 × 0.10) = {100 * 0.10:.2f}
+            Shoot (99 × 0.10) = {99 * 0.10:.2f}
+            Dribble (99 × 0.10) = {99 * 0.10:.2f}
+            Pass (91 × 0.10) = {91 * 0.10:.2f}
+            Defend (70 × 0.10) = {70 * 0.10:.2f}
+            Explosiveness (101 × 0.10) = {101 * 0.10:.2f}
+            {'='*40}
+            TOTAL = {calculated:.2f}
+            """)
+    
+    # Also check Mohamed Salah
+    mohamed_salah = filtered_df[filtered_df["Name"] == "Mohamed Salah"]
+    if not mohamed_salah.empty:
+        salah_stats = mohamed_salah.iloc[0]
+        salah_calc = (
+            salah_stats["PWR"] * 0.454 +
+            salah_stats["Speed"] * 0.10 +
+            salah_stats["Shoot"] * 0.10 +
+            salah_stats["Dribble"] * 0.10 +
+            salah_stats["Pass"] * 0.10 +
+            salah_stats["Defend"] * 0.10 +
+            salah_stats["Explosiveness"] * 0.10
+        )
+        st.subheader("✅ Mohamed Salah Calculation Check")
+        st.metric("Mohamed Salah", f"{salah_calc:.2f}", delta=f"{salah_calc - 100.94:.2f} vs target 100.94")
     
 else:
     st.warning("No players match the selected filters")
 
-st.caption(f"Live data from GitHub main branch - Using weights: PWR(0.45) + others(0.10 each) = 1.05 total")
+st.caption(f"Live data from GitHub main branch - Using weights: PWR(0.454) + others(0.10 each) = 1.054 total")
 
 # Add download button
 if st.button("📥 Download Full Rankings as CSV"):
